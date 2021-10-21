@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mech_tube/model/user_model.dart';
+import 'dart:io';
 
 
 class UserPage extends StatelessWidget{
@@ -58,6 +59,41 @@ class TrainingPage extends StatefulWidget{
 class _TrainingPageState extends State<TrainingPage>{
   var _currentWeight = 10.0;
   int _currentCount = 0;
+  String message;
+  int _trainingTypeIndex = 0;
+  List<String> _trainingTypes = [
+    'Arm curl',
+    'Chest press',
+    'Bench press'
+  ];
+  void _cratchManipulater(double value){
+    double tmp = _currentWeight;
+    setState((){
+      _currentWeight = value.roundToDouble();
+    });
+    message = _currentWeight.toString();
+    // print(message);
+    Socket.connect('192.168.1.3',4041).then((socket) {
+      if(_currentWeight <= 60 && tmp > 60){
+        socket.write('95');
+        print('send 95');
+        socket.close();
+      }else if(_currentWeight > 60 && tmp <= 60){
+        socket.write('155');
+        print('send 155');
+        socket.close();
+      }
+    });
+
+  }
+
+  void _changeTrainingType(){
+    int currentTrainingTypeIndex = _trainingTypeIndex;
+    currentTrainingTypeIndex  = (currentTrainingTypeIndex + 1) % _trainingTypes.length;
+    setState(() {
+      _trainingTypeIndex = currentTrainingTypeIndex;
+  });
+  }
   @override
   Widget build(BuildContext context){
     return Container(
@@ -65,6 +101,51 @@ class _TrainingPageState extends State<TrainingPage>{
         padding: EdgeInsets.symmetric(vertical: 30,horizontal: 50),
         child: Column(
           children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                child: Container(
+                  height: 180,
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        height: 20
+                      ),
+                      Text(
+                        'Training Type',
+                        style: TextStyle(
+                          fontSize: 20
+                        )
+                        ),
+                      Divider(
+                        thickness: 2,
+                      ),
+                      Text(
+                        _trainingTypes[_trainingTypeIndex],
+                        style: TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold
+                        )
+                      ),
+                      SizedBox(
+                        height: 20
+                      ),
+                      ElevatedButton(
+                        child: const Text('Change training type'),
+                        style: ElevatedButton.styleFrom(
+                          primary: Colors.blue,
+                          onPrimary: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: _changeTrainingType,
+                      )
+                    ]
+                  )
+                )
+              )
+            ),
             Card(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10.0),
@@ -87,18 +168,15 @@ class _TrainingPageState extends State<TrainingPage>{
                       Slider(
                         value: _currentWeight,
                         min: 10,
-                        max: 100,
+                        max: 80,
                         divisions: 90,
-                        onChanged: (double value){
-                          setState((){
-                            _currentWeight = value.roundToDouble();
-                          });
-                        }
+                        onChanged: _cratchManipulater,
                       ),
                       Text(
-                        _currentWeight.toString(),
+                        _currentWeight.toString() + ' kg',
                         style: TextStyle(
                           fontSize: 30,
+                          fontWeight: FontWeight.bold
                         )
                       ),
 
