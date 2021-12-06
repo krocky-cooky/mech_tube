@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mech_tube/model/user_model.dart';
-
+import 'package:flutter_blue/flutter_blue.dart';
+import 'dart:async';
 
 class UserPage extends StatelessWidget{
   User user;
@@ -51,13 +52,156 @@ class UserPage extends StatelessWidget{
 }
 
 class TrainingPage extends StatefulWidget{
+
+  final FlutterBlue flutterblue = FlutterBlue.instance;
+  final List<BluetoothDevice> deviceList = new List<BluetoothDevice>();
+  final Map<Guid,List<int>> readValues = new Map<Guid,List<int>>();
   @override
   _TrainingPageState createState() => _TrainingPageState();
 }
 
 class _TrainingPageState extends State<TrainingPage>{
-  var _currentWeight = 10.0;
+  double _currentWeight = 10.0;
   int _currentCount = 0;
+  String deviceName = 'Hoge';
+  BluetoothDevice _connectedDevice;
+  List<BluetoothService> _services;
+  bool isScanning;
+
+  _addDeviceTolist(final BluetoothDevice device){
+    if(!widget.deviceList.contains(device)){
+      setState(() {
+        widget.deviceList.add(device);
+      });
+    }
+  }
+
+  _sendWeight(){
+    for(BluetoothService service in _services) {
+      for(BluetoothCharacteristic characteristic in service.characteristics) {
+        if(characteristic.properties.write) {
+          List<int> sendValues = new List<int>();
+          sendValues.add(_currentWeight.round());
+          characteristic.write(sendValues);
+        }
+      }
+    }
+  }
+
+  Column _buildButtonOrSlider(){
+    if (_connectedDevice != null){
+      return Column(
+          children: [
+            Slider(
+                value: _currentWeight,
+                min: 10,
+                max: 100,
+                divisions: 90,
+                onChanged: (double value){
+                  setState((){
+                    _currentWeight = value.roundToDouble();
+                  });
+                  _sendWeight();
+
+                }
+            ),
+            Text(
+                _currentWeight.toString(),
+                style: TextStyle(
+                  fontSize: 30,
+                )
+            ),
+          ]
+      );
+    }
+    return Column(
+      children: [
+        ElevatedButton(
+          child: const Text('Button'),
+          style: ElevatedButton.styleFrom(
+            primary: Colors.blue,
+            onPrimary: Colors.black,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          onPressed: () async{
+            await widget.flutterblue.stopScan();
+
+            bool flag = false;
+            for (BluetoothDevice device in widget.deviceList){
+              if(device.name == deviceName){
+                flag = true;
+                try{
+                  await device.connect();
+                }catch (e){
+                  if(e.code != 'already_connected'){
+                    throw e;
+                  }
+                }finally{
+                  _services = await device.discoverServices();
+                  setState(() {
+                    _connectedDevice = device;
+                  });
+                }
+
+              }
+
+            }
+            if(!flag) {
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return SimpleDialog(
+                      title: Text("device not found"),
+                      children: <Widget>[
+                      // コンテンツ領域
+                      SimpleDialogOption(
+                      onPressed: () => Navigator.pop(context),
+                  child: Text("接続可能なデバイスが見つかりませんでした"),
+                  ),
+                  ],
+                  );
+                },
+              );
+            }
+
+          },
+        ),
+      ],
+    );
+
+  }
+
+  @override
+  void initState(){
+    super.initState();
+    widget.flutterblue.connectedDevices.asStream().listen((List<BluetoothDevice> devices) {
+      for(BluetoothDevice device in devices){
+        _addDeviceTolist(device);
+      }
+    });
+
+    widget.flutterblue.scanResults.listen((List<ScanResult> results) {
+      for(ScanResult result in results){
+        _addDeviceTolist(result.device);
+      }
+    });
+
+    widget.flutterblue.isScanning.listen((bool flag){
+      isScanning = flag;
+      if (flag) print('scanning');
+      else {
+        print('not scanning');
+        if(_connectedDevice == null){
+          widget.flutterblue.startScan();
+      }
+      }
+
+    });
+    widget.flutterblue.startScan();
+  }
+
   @override
   Widget build(BuildContext context){
     return Container(
@@ -84,24 +228,7 @@ class _TrainingPageState extends State<TrainingPage>{
                       Divider(
                         thickness: 2,
                       ),
-                      Slider(
-                        value: _currentWeight,
-                        min: 10,
-                        max: 100,
-                        divisions: 90,
-                        onChanged: (double value){
-                          setState((){
-                            _currentWeight = value.roundToDouble();
-                          });
-                        }
-                      ),
-                      Text(
-                        _currentWeight.toString(),
-                        style: TextStyle(
-                          fontSize: 30,
-                        )
-                      ),
-
+                      _buildButtonOrSlider()
                     ],
                   ),
                 ),
