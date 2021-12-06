@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mech_tube/model/user_model.dart';
+import 'package:flutter_blue/flutter_blue.dart';
+import 'dart:async';
 
 
 class UserPage extends StatelessWidget{
@@ -51,6 +53,10 @@ class UserPage extends StatelessWidget{
 }
 
 class TrainingPage extends StatefulWidget{
+  final FlutterBlue flutterblue = FlutterBlue.instance;
+  final List<BluetoothDevice> deviceList = new List<BluetoothDevice>();
+  final Map<Guid, List<int>> readValues = new Map<Guid, List<int>>();
+
   @override
   _TrainingPageState createState() => _TrainingPageState();
 }
@@ -213,119 +219,115 @@ class _TrainingPageState extends State<TrainingPage>{
 
 
 
-  void _changeTrainingType(){
-    int currentTrainingTypeIndex = _trainingTypeIndex;
-    currentTrainingTypeIndex  = (currentTrainingTypeIndex + 1) % _trainingTypes.length;
-    setState(() {
-      _trainingTypeIndex = currentTrainingTypeIndex;
-  });
-  }
+  
   @override
   Widget build(BuildContext context){
     return Container(
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 30,horizontal: 50),
-        child: Column(
-          children: [
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                child: Container(
-                  height: 180,
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        height: 20
-                      ),
-                      Text(
-                        'Training Type',
-                        style: TextStyle(
-                          fontSize: 20
-                        )
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 30,horizontal: 50),
+          child: Column(
+            children: [
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                  child: Container(
+                    height: 180,
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          height: 20
                         ),
-                      Divider(
-                        thickness: 2,
-                      ),
-                      Text(
-                        _trainingTypes[_trainingTypeIndex],
-                        style: TextStyle(
-                          fontSize: 30,
-                          fontWeight: FontWeight.bold
-                        )
-                      ),
-                      SizedBox(
-                        height: 20
-                      ),
-                      ElevatedButton(
-                        child: const Text('Change training type'),
-                        style: ElevatedButton.styleFrom(
-                          primary: Colors.blue,
-                          onPrimary: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                        Text(
+                          'Training Type',
+                          style: TextStyle(
+                            fontSize: 20
+                          )
                           ),
+                        Divider(
+                          thickness: 2,
                         ),
-                        onPressed: _changeTrainingType,
-                      )
-                    ]
+                        Text(
+                          _trainingTypes[_trainingTypeIndex],
+                          style: TextStyle(
+                            fontSize: 30,
+                            fontWeight: FontWeight.bold
+                          )
+                        ),
+                        SizedBox(
+                          height: 20
+                        ),
+                        ElevatedButton(
+                          child: const Text('Change training type'),
+                          style: ElevatedButton.styleFrom(
+                            primary: Colors.blue,
+                            onPrimary: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          onPressed: _changeTrainingType,
+                        )
+                      ]
+                    )
                   )
                 )
-              )
-            ),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                child: Container(
-                  height: 180,
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        height: 20,
-                      ),
-                      Text(
-                        'Weight Setting',
-                        style: TextStyle(
-                          fontSize: 20,
-                        )
-                      ),
-                      Divider(
-                        thickness: 2,
-                      ),
-                      _buildButtonOrSlider()
-                    ],
+              ),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                  child: Container(
+                    height: 180,
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          height: 20,
+                        ),
+                        Text(
+                          'Weight Setting',
+                          style: TextStyle(
+                            fontSize: 20,
+                          )
+                        ),
+                        Divider(
+                          thickness: 2,
+                        ),
+                        _buildButtonOrSlider()
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            SizedBox(height: 20,),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                child: Container(
-                  height: 180,
-                  child: Column(
-                    children: [
-                      SizedBox(height: 20),
-                      Text(
-                        'Current Count',
-                        style: TextStyle(
-                          fontSize: 20,
+              SizedBox(height: 20,),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                  child: Container(
+                    height: 180,
+                    child: Column(
+                      children: [
+                        SizedBox(height: 20),
+                        Text(
+                          'Current Count',
+                          style: TextStyle(
+                            fontSize: 20,
+                          )
+                        ),
+                        Divider(thickness: 2),
+                        Text(
+                          _currentCount.toString(),
+                          style: TextStyle(
+                            fontSize: 50,
+                            fontWeight: FontWeight.w600,
+                          )
                         )
-                      ),
-                      Divider(thickness: 2),
-                      Text(
-                        _currentCount.toString(),
-                        style: TextStyle(
-                          fontSize: 50,
-                          fontWeight: FontWeight.w600,
-                        )
-                      )
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                )
               )
-            )
-          ],
+            ],
+          ),
         ),
       ),
     );
