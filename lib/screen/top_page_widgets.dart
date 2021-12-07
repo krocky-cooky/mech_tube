@@ -62,9 +62,9 @@ class TrainingPage extends StatefulWidget{
 }
 
 class _TrainingPageState extends State<TrainingPage>{
-  double _currentWeight = 10.0;
+  double _currentWeight = 0.0;
   int _currentCount = 0;
-  String deviceName = 'Hoge';
+  String deviceName = 'krocky-cooky';
   BluetoothDevice _connectedDevice;
   List<BluetoothService> _services;
   bool isScanning;
@@ -75,7 +75,7 @@ class _TrainingPageState extends State<TrainingPage>{
     'Bench press'
   ];
 
-  _addDeviceTolist(final BluetoothDevice device){
+  void _addDeviceTolist(final BluetoothDevice device){
     if(!widget.deviceList.contains(device)){
       setState(() {
         widget.deviceList.add(device);
@@ -83,7 +83,7 @@ class _TrainingPageState extends State<TrainingPage>{
     }
   }
 
-  _sendWeight(){
+  void _sendWeight(){
     for(BluetoothService service in _services) {
       for(BluetoothCharacteristic characteristic in service.characteristics) {
         if(characteristic.properties.write) {
