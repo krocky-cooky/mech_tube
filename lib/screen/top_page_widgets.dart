@@ -92,7 +92,7 @@ class _TrainingPageState extends State<TrainingPage>{
       for(BluetoothCharacteristic characteristic in service.characteristics) {
         if(characteristic.properties.write) {
           int currentWeightInt = _currentWeight.round();
-          String sendValues = "(m,$currentWeightInt)";
+          String sendValues = "(t,$currentWeightInt)";
 
           characteristic.write(
               utf8.encode(sendValues));
@@ -157,8 +157,8 @@ class _TrainingPageState extends State<TrainingPage>{
           children: [
             Slider(
                 value: _currentWeight,
-                min: 10,
-                max: 100,
+                min: 0,
+                max: 5,
                 divisions: 90,
                 onChanged: (double value){
                   setState((){
