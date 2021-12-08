@@ -3,6 +3,7 @@ import 'package:mech_tube/screen/login_page.dart';
 import 'package:mech_tube/screen/top_page.dart';
 
 void main() {
+  print('app started 2');
   runApp(MechTubeApp());
 }
 

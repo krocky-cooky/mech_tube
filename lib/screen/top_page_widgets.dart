@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mech_tube/model/user_model.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'dart:async';
+import 'dart:convert';
 
 
 class UserPage extends StatelessWidget{
@@ -64,8 +65,9 @@ class TrainingPage extends StatefulWidget{
 class _TrainingPageState extends State<TrainingPage>{
   double _currentWeight = 0.0;
   int _currentCount = 0;
-  String deviceName = 'krocky-cooky';
+  String deviceName = 'ESP32_test';
   BluetoothDevice _connectedDevice;
+  String connection = 'not connected';
   List<BluetoothService> _services;
   bool isScanning;
   int _trainingTypeIndex = 0;
@@ -87,9 +89,11 @@ class _TrainingPageState extends State<TrainingPage>{
     for(BluetoothService service in _services) {
       for(BluetoothCharacteristic characteristic in service.characteristics) {
         if(characteristic.properties.write) {
-          List<int> sendValues = new List<int>();
-          sendValues.add(_currentWeight.round());
-          characteristic.write(sendValues);
+          int currentWeightInt = _currentWeight.round();
+          String sendValues = "(m,$currentWeightInt)";
+
+          characteristic.write(
+              utf8.encode(sendValues));
         }
       }
     }
@@ -102,6 +106,17 @@ class _TrainingPageState extends State<TrainingPage>{
       _trainingTypeIndex = currentTrainingTypeIndex;
     });
   }
+
+  void _manageConnection(BluetoothDevice device) {
+    device.state.listen((BluetoothDeviceState state){
+      if (state == BluetoothDeviceState.disconnected){
+        setState(() {
+          _connectedDevice = null;
+        });
+      }
+    });
+  }
+
 
   Column _buildButtonOrSlider(){
     if (_connectedDevice != null){
@@ -141,22 +156,26 @@ class _TrainingPageState extends State<TrainingPage>{
             ),
           ),
           onPressed: () async{
-            await widget.flutterblue.stopScan();
-
+            print('pressed');
+            widget.flutterblue.stopScan();
             bool flag = false;
+            print(widget.deviceList.length);
             for (BluetoothDevice device in widget.deviceList){
               if(device.name == deviceName){
                 flag = true;
                 try{
                   await device.connect();
                 }catch (e){
+                  print('error occurred');
                   if(e.code != 'already_connected'){
                     throw e;
                   }
                 }finally{
                   _services = await device.discoverServices();
+                  _manageConnection(device);
                   setState(() {
                     _connectedDevice = device;
+                    connection = 'connected';
                   });
                 }
 
@@ -164,6 +183,11 @@ class _TrainingPageState extends State<TrainingPage>{
 
             }
             if(!flag) {
+              setState(() {
+                connection = 'device not found';
+              });
+              widget.flutterblue.startScan(timeout: Duration(seconds: 10));
+
               showDialog(
                 context: context,
                 builder: (context) {
@@ -179,7 +203,27 @@ class _TrainingPageState extends State<TrainingPage>{
                   );
                 },
               );
+            }else{
+              setState(() {
+                connection = 'connect succeeded';
+              });
+              showDialog(
+                context: context,
+                builder: (context) {
+                  return SimpleDialog(
+                    title: Text("connect succeeded"),
+                    children: <Widget>[
+                      // コンテンツ領域
+                      SimpleDialogOption(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text("接続に成功しました"),
+                      ),
+                    ],
+                  );
+                },
+              );
             }
+            flag = false;
 
           },
         ),
@@ -194,12 +238,14 @@ class _TrainingPageState extends State<TrainingPage>{
     widget.flutterblue.connectedDevices.asStream().listen((List<BluetoothDevice> devices) {
       for(BluetoothDevice device in devices){
         _addDeviceTolist(device);
+        print('connected device = ' + (device.name == '' ? 'unknown device' : device.name));
       }
     });
 
     widget.flutterblue.scanResults.listen((List<ScanResult> results) {
       for(ScanResult result in results){
         _addDeviceTolist(result.device);
+        print('scanresult device = ' + (result.device.name == '' ? 'unknown device' : result.device.name));
       }
     });
 
@@ -208,13 +254,9 @@ class _TrainingPageState extends State<TrainingPage>{
       if (flag) print('scanning');
       else {
         print('not scanning');
-        if(_connectedDevice == null){
-          widget.flutterblue.startScan();
       }
-      }
-
     });
-    widget.flutterblue.startScan();
+    widget.flutterblue.startScan(timeout: Duration(seconds: 10));
   }
 
 
@@ -292,7 +334,16 @@ class _TrainingPageState extends State<TrainingPage>{
                         Divider(
                           thickness: 2,
                         ),
-                        _buildButtonOrSlider()
+                        _buildButtonOrSlider(),
+                        Divider(
+                          thickness: 2,
+                        ),
+                        Text(
+                          connection,
+                          style: TextStyle(
+                            fontSize: 15,
+                          )
+                        )
                       ],
                     ),
                   ),

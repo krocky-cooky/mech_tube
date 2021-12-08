@@ -30,7 +30,9 @@ class _TopPageState extends State<TopPage>{
         backgroundColor: Colors.blue,
       ),
       body:SafeArea(
-        child: _selectedWidget[_currentTab]
+        child: SingleChildScrollView(
+          child: _selectedWidget[_currentTab]
+        )
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentTab,
