@@ -62,6 +62,7 @@ class TrainingPage extends StatefulWidget{
   _TrainingPageState createState() => _TrainingPageState();
 }
 
+
 class _TrainingPageState extends State<TrainingPage>{
   double _currentWeight = 0.0;
   int _currentCount = 0;
@@ -70,6 +71,7 @@ class _TrainingPageState extends State<TrainingPage>{
   String connection = 'not connected';
   List<BluetoothService> _services;
   bool isScanning;
+  bool motorIsOn = false;
   int _trainingTypeIndex = 0;
   List<String> _trainingTypes = [
     'Arm curl',
@@ -99,6 +101,22 @@ class _TrainingPageState extends State<TrainingPage>{
     }
   }
 
+  void _turnOnMotor() async {
+    for (BluetoothService  service in _services){
+      for (BluetoothCharacteristic characteristic in service.characteristics) {
+        if (characteristic.properties.write) {
+          String turnOnConverter = "(p,1)";
+          String turnOnMotor = "(m,1)";
+          await characteristic.write(utf8.encode(turnOnConverter));
+          await characteristic.write(utf8.encode(turnOnMotor));
+          setState(() {
+            motorIsOn = true;
+          });
+        }
+      }
+    }
+  }
+
   void _changeTrainingType(){
     int currentTrainingTypeIndex = _trainingTypeIndex;
     currentTrainingTypeIndex  = (currentTrainingTypeIndex + 1) % _trainingTypes.length;
@@ -110,6 +128,21 @@ class _TrainingPageState extends State<TrainingPage>{
   void _manageConnection(BluetoothDevice device) {
     device.state.listen((BluetoothDeviceState state){
       if (state == BluetoothDeviceState.disconnected){
+        showDialog(
+          context: context,
+          builder: (context) {
+            return SimpleDialog(
+              title: Text("device not found"),
+              children: <Widget>[
+                // コンテンツ領域
+                SimpleDialogOption(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text("デバイスとの接続が途切れました"),
+                ),
+              ],
+            );
+          },
+        );
         setState(() {
           _connectedDevice = null;
         });
@@ -119,7 +152,7 @@ class _TrainingPageState extends State<TrainingPage>{
 
 
   Column _buildButtonOrSlider(){
-    if (_connectedDevice != null){
+    if (motorIsOn){
       return Column(
           children: [
             Slider(
@@ -147,7 +180,7 @@ class _TrainingPageState extends State<TrainingPage>{
     return Column(
       children: [
         ElevatedButton(
-          child: const Text('Button'),
+          child: const Text('turn on converter and motor'),
           style: ElevatedButton.styleFrom(
             primary: Colors.blue,
             onPrimary: Colors.black,
@@ -155,81 +188,225 @@ class _TrainingPageState extends State<TrainingPage>{
               borderRadius: BorderRadius.circular(10),
             ),
           ),
-          onPressed: () async{
-            print('pressed');
-            widget.flutterblue.stopScan();
-            bool flag = false;
-            print(widget.deviceList.length);
-            for (BluetoothDevice device in widget.deviceList){
-              if(device.name == deviceName){
-                flag = true;
-                try{
-                  await device.connect();
-                }catch (e){
-                  print('error occurred');
-                  if(e.code != 'already_connected'){
-                    throw e;
-                  }
-                }finally{
-                  _services = await device.discoverServices();
-                  _manageConnection(device);
-                  setState(() {
-                    _connectedDevice = device;
-                    connection = 'connected';
-                  });
-                }
-
-              }
-
-            }
-            if(!flag) {
-              setState(() {
-                connection = 'device not found';
-              });
-              widget.flutterblue.startScan(timeout: Duration(seconds: 10));
-
-              showDialog(
-                context: context,
-                builder: (context) {
-                  return SimpleDialog(
-                      title: Text("device not found"),
-                      children: <Widget>[
-                      // コンテンツ領域
-                      SimpleDialogOption(
-                      onPressed: () => Navigator.pop(context),
-                  child: Text("接続可能なデバイスが見つかりませんでした"),
-                  ),
-                  ],
-                  );
-                },
-              );
-            }else{
-              setState(() {
-                connection = 'connect succeeded';
-              });
-              showDialog(
-                context: context,
-                builder: (context) {
-                  return SimpleDialog(
-                    title: Text("connect succeeded"),
-                    children: <Widget>[
-                      // コンテンツ領域
-                      SimpleDialogOption(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text("接続に成功しました"),
-                      ),
-                    ],
-                  );
-                },
-              );
-            }
-            flag = false;
-
-          },
+          onPressed: _turnOnMotor
         ),
       ],
     );
 
+  }
+
+  Widget _buildConnectionOrTrainingPage() {
+    if (_connectedDevice != null){
+      return Container(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 30,horizontal: 50),
+            child: Column(
+              children: [
+                Card(
+                    child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                        child: Container(
+                            height: 180,
+                            child: Column(
+                                children: [
+                                  SizedBox(
+                                      height: 20
+                                  ),
+                                  Text(
+                                      'Training Type',
+                                      style: TextStyle(
+                                          fontSize: 20
+                                      )
+                                  ),
+                                  Divider(
+                                    thickness: 2,
+                                  ),
+                                  Text(
+                                      _trainingTypes[_trainingTypeIndex],
+                                      style: TextStyle(
+                                          fontSize: 30,
+                                          fontWeight: FontWeight.bold
+                                      )
+                                  ),
+                                  SizedBox(
+                                      height: 20
+                                  ),
+                                  ElevatedButton(
+                                    child: const Text('Change training type'),
+                                    style: ElevatedButton.styleFrom(
+                                      primary: Colors.blue,
+                                      onPrimary: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                    onPressed: _changeTrainingType,
+                                  )
+                                ]
+                            )
+                        )
+                    )
+                ),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                    child: Container(
+                      height: 180,
+                      child: Column(
+                        children: [
+                          SizedBox(
+                            height: 20,
+                          ),
+                          Text(
+                              'Weight Setting',
+                              style: TextStyle(
+                                fontSize: 20,
+                              )
+                          ),
+                          Divider(
+                            thickness: 2,
+                          ),
+                          _buildButtonOrSlider(),
+                          Divider(
+                            thickness: 2,
+                          ),
+                          Text(
+                              connection,
+                              style: TextStyle(
+                                fontSize: 15,
+                              )
+                          )
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20,),
+                Card(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                      child: Container(
+                        height: 180,
+                        child: Column(
+                          children: [
+                            SizedBox(height: 20),
+                            Text(
+                                'Current Count',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                )
+                            ),
+                            Divider(thickness: 2),
+                            Text(
+                                _currentCount.toString(),
+                                style: TextStyle(
+                                  fontSize: 50,
+                                  fontWeight: FontWeight.w600,
+                                )
+                            )
+                          ],
+                        ),
+                      ),
+                    )
+                )
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return Container(
+      height: MediaQuery.of(context).size.height,
+      alignment: Alignment.bottomCenter,
+      child: Center(
+        child: SizedBox(
+          width: 200,
+          height: 50,
+          child: ElevatedButton(
+          child: const Text(
+              'Connect',
+          style: TextStyle(
+              fontSize: 30,
+              fontWeight: FontWeight.w600
+          )),
+    style: ElevatedButton.styleFrom(
+    primary: Colors.blue,
+    onPrimary: Colors.black,
+    shape: RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(10),
+    ),
+    ),
+    onPressed: () async{
+      print('pressed');
+      widget.flutterblue.stopScan();
+      bool flag = false;
+      print(widget.deviceList.length);
+      for (BluetoothDevice device in widget.deviceList){
+          if(device.name == deviceName){
+            flag = true;
+            try{
+              await device.connect();
+            }catch (e){
+              print('error occurred');
+              if(e.code != 'already_connected'){
+                throw e;
+              }
+            }finally{
+              _services = await device.discoverServices();
+              _manageConnection(device);
+              setState(() {
+                _connectedDevice = device;
+                connection = 'connected';
+              });
+            }
+
+          }
+
+      }
+      if(!flag) {
+          connection = 'device not found';
+          widget.flutterblue.startScan(timeout: Duration(seconds: 10));
+
+          showDialog(
+            context: context,
+            builder: (context) {
+              return SimpleDialog(
+                title: Text("device not found"),
+                children: <Widget>[
+                  // コンテンツ領域
+                  SimpleDialogOption(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text("接続可能なデバイスが見つかりませんでした"),
+                  ),
+                ],
+              );
+            },
+          );
+      }else{
+          connection = 'connect succeeded';
+          showDialog(
+            context: context,
+            builder: (context) {
+              return SimpleDialog(
+                title: Text("connect succeeded"),
+                children: <Widget>[
+                  // コンテンツ領域
+                  SimpleDialogOption(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text("接続に成功しました"),
+                  ),
+                ],
+              );
+            },
+          );
+      }
+      flag = false;
+
+    },),
+        ),
+      )
+    );
   }
 
   @override
@@ -260,128 +437,9 @@ class _TrainingPageState extends State<TrainingPage>{
   }
 
 
-
-  
   @override
   Widget build(BuildContext context){
-    return Container(
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 30,horizontal: 50),
-          child: Column(
-            children: [
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                  child: Container(
-                    height: 180,
-                    child: Column(
-                      children: [
-                        SizedBox(
-                          height: 20
-                        ),
-                        Text(
-                          'Training Type',
-                          style: TextStyle(
-                            fontSize: 20
-                          )
-                          ),
-                        Divider(
-                          thickness: 2,
-                        ),
-                        Text(
-                          _trainingTypes[_trainingTypeIndex],
-                          style: TextStyle(
-                            fontSize: 30,
-                            fontWeight: FontWeight.bold
-                          )
-                        ),
-                        SizedBox(
-                          height: 20
-                        ),
-                        ElevatedButton(
-                          child: const Text('Change training type'),
-                          style: ElevatedButton.styleFrom(
-                            primary: Colors.blue,
-                            onPrimary: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          onPressed: _changeTrainingType,
-                        )
-                      ]
-                    )
-                  )
-                )
-              ),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                  child: Container(
-                    height: 180,
-                    child: Column(
-                      children: [
-                        SizedBox(
-                          height: 20,
-                        ),
-                        Text(
-                          'Weight Setting',
-                          style: TextStyle(
-                            fontSize: 20,
-                          )
-                        ),
-                        Divider(
-                          thickness: 2,
-                        ),
-                        _buildButtonOrSlider(),
-                        Divider(
-                          thickness: 2,
-                        ),
-                        Text(
-                          connection,
-                          style: TextStyle(
-                            fontSize: 15,
-                          )
-                        )
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: 20,),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                  child: Container(
-                    height: 180,
-                    child: Column(
-                      children: [
-                        SizedBox(height: 20),
-                        Text(
-                          'Current Count',
-                          style: TextStyle(
-                            fontSize: 20,
-                          )
-                        ),
-                        Divider(thickness: 2),
-                        Text(
-                          _currentCount.toString(),
-                          style: TextStyle(
-                            fontSize: 50,
-                            fontWeight: FontWeight.w600,
-                          )
-                        )
-                      ],
-                    ),
-                  ),
-                )
-              )
-            ],
-          ),
-        ),
-      ),
-    );
+    return _buildConnectionOrTrainingPage();
   }
 }
 
