@@ -74,7 +74,8 @@ class _TrainingPageState extends State<TrainingPage>{
   bool isScanning;
   bool motorIsOn = false;
   int _trainingTypeIndex = 0;
-  DateTime _lastSliderChanged = DateTime.now();
+  Timer _timer;
+  int _timeToSend = 0;
   List<String> _trainingTypes = [
     'Arm curl',
     'Chest press',
@@ -89,16 +90,26 @@ class _TrainingPageState extends State<TrainingPage>{
     }
   }
 
+
+
   void _sendWeight(){
     for(BluetoothService service in _services) {
       for(BluetoothCharacteristic characteristic in service.characteristics) {
         if(characteristic.properties.write) {
           String sendValues = "(t,$_currentWeight)";
-
+          print("SEND WEIGHT !");
           characteristic.write(
               utf8.encode(sendValues));
         }
       }
+    }
+  }
+
+  void _sendingTimer() {
+    if(_timeToSend == -1)return;
+    _timeToSend -= 1;
+    if (_timeToSend == 0){
+      _sendWeight();
     }
   }
 
@@ -125,7 +136,7 @@ class _TrainingPageState extends State<TrainingPage>{
           String turnOffConverter = "(p,0)";
           await characteristic.write(utf8.encode(turnOffConverter));
           setState(() {
-            motorIsOn = true;
+            motorIsOn = false;
           });
         }
       }
@@ -182,20 +193,17 @@ class _TrainingPageState extends State<TrainingPage>{
                 max: 50,
                 divisions: 50,
                 onChanged: (double value){
-                  Duration elapsed = DateTime.now().difference(_lastSliderChanged);
-                  _lastSliderChanged = DateTime.now();
+                  _timeToSend = 2;
                   setState((){
                     _currentWeightSlider = value.roundToDouble();
                     _currentWeight = value.roundToDouble() / 10;
                   });
-                  if (elapsed.inSeconds > 1) {
-                    _sendWeight();
-                  }
+
 
                 }
             ),
             ElevatedButton(
-                child: const Text('turn on converter and motor'),
+                child: const Text('turn off converter and motor'),
                 style: ElevatedButton.styleFrom(
                   primary: Colors.blue,
                   onPrimary: Colors.black,
@@ -283,7 +291,7 @@ class _TrainingPageState extends State<TrainingPage>{
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 10.0),
                     child: Container(
-                      height: 180,
+                      height: 200,
                       child: Column(
                         children: [
                           SizedBox(
@@ -443,6 +451,8 @@ class _TrainingPageState extends State<TrainingPage>{
   @override
   void initState(){
     super.initState();
+    new Timer.periodic(Duration(seconds: 1), (Timer t) => _sendingTimer());
+
     widget.flutterblue.connectedDevices.asStream().listen((List<BluetoothDevice> devices) {
       for(BluetoothDevice device in devices){
         _addDeviceTolist(device);
