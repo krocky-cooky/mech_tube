@@ -58,15 +58,17 @@ class TrainingPage extends StatefulWidget{
   final List<BluetoothDevice> deviceList = new List<BluetoothDevice>();
   final Map<Guid, List<int>> readValues = new Map<Guid, List<int>>();
 
+
   @override
   _TrainingPageState createState() => _TrainingPageState();
 }
 
 
 class _TrainingPageState extends State<TrainingPage>{
+  double _currentWeightSlider = 0;
   double _currentWeight = 0.0;
   int _currentCount = 0;
-  String deviceName = 'ESP32_test';
+  String deviceName = 'ESP32';
   BluetoothDevice _connectedDevice;
   String connection = 'not connected';
   List<BluetoothService> _services;
@@ -91,8 +93,7 @@ class _TrainingPageState extends State<TrainingPage>{
     for(BluetoothService service in _services) {
       for(BluetoothCharacteristic characteristic in service.characteristics) {
         if(characteristic.properties.write) {
-          int currentWeightInt = _currentWeight.round();
-          String sendValues = "(t,$currentWeightInt)";
+          String sendValues = "(t,$_currentWeight)";
 
           characteristic.write(
               utf8.encode(sendValues));
@@ -156,13 +157,14 @@ class _TrainingPageState extends State<TrainingPage>{
       return Column(
           children: [
             Slider(
-                value: _currentWeight,
+                value: _currentWeightSlider,
                 min: 0,
-                max: 5,
-                divisions: 90,
+                max: 50,
+                divisions: 50,
                 onChanged: (double value){
                   setState((){
-                    _currentWeight = value.roundToDouble();
+                    _currentWeightSlider = value.roundToDouble();
+                    _currentWeight = value.roundToDouble() / 10;
                   });
                   _sendWeight();
 
