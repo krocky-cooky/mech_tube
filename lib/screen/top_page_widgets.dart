@@ -64,9 +64,10 @@ class TrainingPage extends StatefulWidget{
 
 
 class _TrainingPageState extends State<TrainingPage>{
+  double _currentWeightSlider = 0;
   double _currentWeight = 0.0;
   int _currentCount = 0;
-  String deviceName = 'ESP32_test';
+  String deviceName = 'ESP32';
   BluetoothDevice _connectedDevice;
   String connection = 'not connected';
   List<BluetoothService> _services;
@@ -176,15 +177,16 @@ class _TrainingPageState extends State<TrainingPage>{
                 )
             ),
             Slider(
-                value: _currentWeight,
+                value: _currentWeightSlider,
                 min: 0,
-                max: 5,
+                max: 50,
                 divisions: 50,
                 onChanged: (double value){
                   Duration elapsed = DateTime.now().difference(_lastSliderChanged);
                   _lastSliderChanged = DateTime.now();
                   setState((){
-                    _currentWeight = value.roundToDouble();
+                    _currentWeightSlider = value.roundToDouble();
+                    _currentWeight = value.roundToDouble() / 10;
                   });
                   if (elapsed.inSeconds > 1) {
                     _sendWeight();
@@ -203,7 +205,6 @@ class _TrainingPageState extends State<TrainingPage>{
                 ),
                 onPressed: _turnOffMotor
             ),
-
           ]
       );
     }

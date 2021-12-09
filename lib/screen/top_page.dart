@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mech_tube/screen/top_page_widgets.dart';
 import 'package:mech_tube/model/user_model.dart';
+import 'package:flutter_blue/flutter_blue.dart';
 
 class TopPage extends StatefulWidget{
   @override
@@ -9,6 +10,7 @@ class TopPage extends StatefulWidget{
 
 class _TopPageState extends State<TopPage>{
   int _currentTab = 0;
+  BluetoothDevice device;
   List<Widget> _selectedWidget= [
     UserPage(
         user: taku,
@@ -21,6 +23,14 @@ class _TopPageState extends State<TopPage>{
     'training',
     'analyze'
   ];
+  
+  Widget _buildTabWidget(int tab) {
+    if(tab == 0)return UserPage(
+      user: taku
+    );
+    else if (tab == 1) return TrainingPage();
+    else return AnalyzePage();
+  }
 
   @override
   Widget build(BuildContext context){
@@ -31,7 +41,7 @@ class _TopPageState extends State<TopPage>{
       ),
       body:SafeArea(
         child: SingleChildScrollView(
-          child: _selectedWidget[_currentTab]
+          child: _buildTabWidget(_currentTab)
         )
       ),
       bottomNavigationBar: BottomNavigationBar(
