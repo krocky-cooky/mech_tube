@@ -73,6 +73,7 @@ class _TrainingPageState extends State<TrainingPage>{
   bool isScanning;
   bool motorIsOn = false;
   int _trainingTypeIndex = 0;
+  DateTime _lastSliderChanged = DateTime.now();
   List<String> _trainingTypes = [
     'Arm curl',
     'Chest press',
@@ -91,8 +92,7 @@ class _TrainingPageState extends State<TrainingPage>{
     for(BluetoothService service in _services) {
       for(BluetoothCharacteristic characteristic in service.characteristics) {
         if(characteristic.properties.write) {
-          int currentWeightInt = _currentWeight.round();
-          String sendValues = "(t,$currentWeightInt)";
+          String sendValues = "(t,$_currentWeight)";
 
           characteristic.write(
               utf8.encode(sendValues));
@@ -109,6 +109,20 @@ class _TrainingPageState extends State<TrainingPage>{
           String turnOnMotor = "(m,1)";
           await characteristic.write(utf8.encode(turnOnConverter));
           await characteristic.write(utf8.encode(turnOnMotor));
+          setState(() {
+            motorIsOn = true;
+          });
+        }
+      }
+    }
+  }
+
+  void _turnOffMotor() async {
+    for (BluetoothService  service in _services){
+      for (BluetoothCharacteristic characteristic in service.characteristics) {
+        if (characteristic.properties.write) {
+          String turnOffConverter = "(p,0)";
+          await characteristic.write(utf8.encode(turnOffConverter));
           setState(() {
             motorIsOn = true;
           });
@@ -155,25 +169,41 @@ class _TrainingPageState extends State<TrainingPage>{
     if (motorIsOn){
       return Column(
           children: [
-            Slider(
-                value: _currentWeight,
-                min: 0,
-                max: 5,
-                divisions: 90,
-                onChanged: (double value){
-                  setState((){
-                    _currentWeight = value.roundToDouble();
-                  });
-                  _sendWeight();
-
-                }
-            ),
             Text(
                 _currentWeight.toString(),
                 style: TextStyle(
                   fontSize: 30,
                 )
             ),
+            Slider(
+                value: _currentWeight,
+                min: 0,
+                max: 5,
+                divisions: 50,
+                onChanged: (double value){
+                  Duration elapsed = DateTime.now().difference(_lastSliderChanged);
+                  _lastSliderChanged = DateTime.now();
+                  setState((){
+                    _currentWeight = value.roundToDouble();
+                  });
+                  if (elapsed.inSeconds > 1) {
+                    _sendWeight();
+                  }
+
+                }
+            ),
+            ElevatedButton(
+                child: const Text('turn on converter and motor'),
+                style: ElevatedButton.styleFrom(
+                  primary: Colors.blue,
+                  onPrimary: Colors.black,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: _turnOffMotor
+            ),
+
           ]
       );
     }
