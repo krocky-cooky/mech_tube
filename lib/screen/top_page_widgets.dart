@@ -119,11 +119,23 @@ class _TrainingPageState extends State<TrainingPage>{
         if (characteristic.properties.write) {
           String turnOnConverter = "(p,1)";
           String turnOnMotor = "(m,1)";
-          await characteristic.write(utf8.encode(turnOnConverter));
           await characteristic.write(utf8.encode(turnOnMotor));
           setState(() {
             motorIsOn = true;
           });
+        }
+      }
+    }
+  }
+
+  void _turnOnConverter() async {
+    for (BluetoothService  service in _services){
+      for (BluetoothCharacteristic characteristic in service.characteristics) {
+        if (characteristic.properties.write) {
+          String turnOnConverter = "(p,1)";
+          String turnOnMotor = "(m,1)";
+          await characteristic.write(utf8.encode(turnOnConverter));
+
         }
       }
     }
@@ -135,6 +147,8 @@ class _TrainingPageState extends State<TrainingPage>{
         if (characteristic.properties.write) {
           String turnOffConverter = "(p,0)";
           await characteristic.write(utf8.encode(turnOffConverter));
+          _currentWeightSlider = 0;
+          _timeToSend = -1;
           setState(() {
             motorIsOn = false;
           });
@@ -219,7 +233,7 @@ class _TrainingPageState extends State<TrainingPage>{
     return Column(
       children: [
         ElevatedButton(
-          child: const Text('turn on converter and motor'),
+          child: const Text('turn on converter'),
           style: ElevatedButton.styleFrom(
             primary: Colors.blue,
             onPrimary: Colors.black,
@@ -227,7 +241,18 @@ class _TrainingPageState extends State<TrainingPage>{
               borderRadius: BorderRadius.circular(10),
             ),
           ),
-          onPressed: _turnOnMotor
+          onPressed: _turnOnConverter
+        ),
+        ElevatedButton(
+            child: const Text('turn on motor'),
+            style: ElevatedButton.styleFrom(
+              primary: Colors.blue,
+              onPrimary: Colors.black,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: _turnOnMotor
         ),
       ],
     );
