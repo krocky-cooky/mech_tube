@@ -64,7 +64,7 @@ class TrainingPage extends StatefulWidget{
 
 
 class _TrainingPageState extends State<TrainingPage>{
-  double _currentWeightSlider = 0;
+  double _currentWeightSlider = 0.0;
   double _currentWeight = 0.0;
   int _currentCount = 0;
   String deviceName = 'ESP32';
@@ -81,6 +81,11 @@ class _TrainingPageState extends State<TrainingPage>{
     'Chest press',
     'Bench press'
   ];
+
+  double _convertSliderToWeight (double slider) {
+    double weight = slider * 3 / 10;
+    return weight;
+  }
 
   void _addDeviceTolist(final BluetoothDevice device){
     if(!widget.deviceList.contains(device)){
@@ -157,6 +162,8 @@ class _TrainingPageState extends State<TrainingPage>{
     }
   }
 
+
+
   void _changeTrainingType(){
     int currentTrainingTypeIndex = _trainingTypeIndex;
     currentTrainingTypeIndex  = (currentTrainingTypeIndex + 1) % _trainingTypes.length;
@@ -196,7 +203,7 @@ class _TrainingPageState extends State<TrainingPage>{
       return Column(
           children: [
             Text(
-                _currentWeight.toString(),
+                '$_currentWeight kg',
                 style: TextStyle(
                   fontSize: 30,
                 )
@@ -204,13 +211,13 @@ class _TrainingPageState extends State<TrainingPage>{
             Slider(
                 value: _currentWeightSlider,
                 min: 0,
-                max: 50,
-                divisions: 50,
+                max: 65,
+                divisions: 65,
                 onChanged: (double value){
                   _timeToSend = 2;
                   setState((){
                     _currentWeightSlider = value.roundToDouble();
-                    _currentWeight = value.roundToDouble() / 10;
+                    _currentWeight = _convertSliderToWeight(value.roundToDouble());
                   });
 
 
